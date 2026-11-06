@@ -60,7 +60,7 @@ func DecodeToken(token string, request *Request) (uuid.UUID, []byte, []byte, int
 	}
 
 	if len(rawToken) != 120 {
-		return uuid.Nil, nil, nil, 0, err
+		return uuid.Nil, nil, nil, 0, errors.New("invalid token length")
 	}
 
 	parsedUUID, err := uuid.FromBytes(rawToken[0:16])
