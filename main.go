@@ -6,10 +6,17 @@ import (
 
 	"github.com/ephmrl-team/ephmrl-auth-v2/pkg/auth"
 	"github.com/ephmrl-team/ephmrl-auth-v2/pkg/identity"
+
+	"github.com/google/uuid"
 )
 
 func main() {
 	user, secret, err := identity.Generate()
+	if err != nil {
+		panic(err)
+	}
+
+	uuid, err := uuid.NewV7()
 	if err != nil {
 		panic(err)
 	}
@@ -22,9 +29,11 @@ func main() {
 		Type:      "application/json",
 		BodyHash:  "",
 		Timestamp: timestamp,
+		UUID:      uuid.String(),
+		PublicKey: user.PublicKeys.Ed25519,
 	}
 
-	token := auth.GenerateToken(user.PublicKeys.Ed25519, secret.Ed25519, request)
+	token := auth.GenerateToken(secret.Ed25519, request)
 
 	fmt.Println(token)
 

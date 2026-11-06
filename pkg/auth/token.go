@@ -18,23 +18,18 @@ type Request struct {
 	BodyHash  string
 	Timestamp int64
 	UUID      string
-	PublicKey string
+	PublicKey []byte
 }
 
-func GenerateToken(edPublicKey, edSecretKey []byte, request *Request) string {
-	uuid, err := uuid.NewV7()
-	if err != nil {
-		panic(err)
-	}
-
+func GenerateToken(edSecretKey []byte, request *Request) string {
 	message := crypto.ConcatBytes(
 		[]byte(request.Method),
 		[]byte(request.Path),
 		[]byte(request.Type),
 		[]byte(request.BodyHash),
 		fmt.Appendf([]byte{}, "%d", request.Timestamp),
-		[]byte(uuid.String()),
-		[]byte(base64.StdEncoding.EncodeToString(edPublicKey)),
+		[]byte(request.UUID),
+		[]byte(base64.StdEncoding.EncodeToString(request.PublicKey)),
 	)
 
 	signature := ed25519.Sign(edSecretKey, message)
@@ -42,9 +37,11 @@ func GenerateToken(edPublicKey, edSecretKey []byte, request *Request) string {
 	timestampBinary := make([]byte, 8)
 	binary.BigEndian.PutUint64(timestampBinary, uint64(request.Timestamp))
 
+	id, _ := uuid.Parse(request.UUID)
+
 	rawToken := make([]byte, 0, 120)
-	rawToken = append(rawToken, uuid[:]...)
-	rawToken = append(rawToken, edPublicKey...)
+	rawToken = append(rawToken, id[:]...)
+	rawToken = append(rawToken, request.PublicKey...)
 	rawToken = append(rawToken, signature...)
 	rawToken = append(rawToken, timestampBinary...)
 
