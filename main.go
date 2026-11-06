@@ -2,12 +2,9 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/ephmrl-team/ephmrl-auth-v2/pkg/auth"
 	"github.com/ephmrl-team/ephmrl-auth-v2/pkg/identity"
-
-	"github.com/google/uuid"
 )
 
 func main() {
@@ -16,21 +13,9 @@ func main() {
 		panic(err)
 	}
 
-	uuid, err := uuid.NewV7()
+	request, err := auth.NewRequest("DELETE", "/user", "application/json", "", user.PublicKeys.Ed25519)
 	if err != nil {
 		panic(err)
-	}
-
-	timestamp := time.Now().Unix()
-
-	request := &auth.Request{
-		Method:    "DELETE",
-		Path:      "/user",
-		Type:      "application/json",
-		BodyHash:  "",
-		Timestamp: timestamp,
-		UUID:      uuid.String(),
-		PublicKey: user.PublicKeys.Ed25519,
 	}
 
 	token, err := auth.GenerateToken(secret.Ed25519, request)

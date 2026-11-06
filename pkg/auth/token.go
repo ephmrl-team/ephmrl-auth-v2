@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/cloudflare/circl/sign/ed25519"
 	"github.com/ephmrl-team/ephmrl-auth-v2/internal/crypto"
@@ -22,13 +23,34 @@ type Request struct {
 	PublicKey []byte
 }
 
+func NewRequest(method, path, requestType, bodyHash string, publicKey []byte) (*Request, error) {
+	uuid, err := uuid.NewRandom()
+	if err != nil {
+		return nil, err
+	}
+
+	timestamp := time.Now().Unix()
+
+	request := &Request{
+		Method:    method,
+		Path:      path,
+		Type:      requestType,
+		BodyHash:  bodyHash,
+		Timestamp: timestamp,
+		UUID:      uuid.String(),
+		PublicKey: publicKey,
+	}
+
+	return request, nil
+}
+
 func GenerateToken(edSecretKey []byte, request *Request) (string, error) {
 	if request == nil {
 		return "", errors.New("request cannot be nil")
 	}
 
 	id, err := uuid.Parse(request.UUID)
-	if err != nil || id == uuid.Nil || id.Version() != 7 {
+	if err != nil || id == uuid.Nil || id.Version() != 4 {
 		return "", errors.New("invalid uuid")
 	}
 
