@@ -63,6 +63,9 @@ func GenerateToken(edSecretKey []byte, request *Request) (string, error) {
 }
 
 func DecodeToken(token string, request *Request) (uuid.UUID, []byte, []byte, int64, error) {
+	if len(token) == 160 {
+		return uuid.Nil, nil, nil, 0, errors.New("invalid token length")
+	}
 	rawToken, err := base64.StdEncoding.DecodeString(token)
 	if err != nil {
 		return uuid.Nil, nil, nil, 0, err
