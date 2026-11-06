@@ -26,6 +26,11 @@ func GenerateToken(edSecretKey []byte, request *Request) (string, error) {
 		return "", errors.New("request cannot be nil")
 	}
 
+	id, err := uuid.Parse(request.UUID)
+	if err != nil || id == uuid.Nil || id.Version() != 7 {
+		return "", errors.New("invalid uuid")
+	}
+
 	if len(request.PublicKey) != ed25519.PublicKeySize {
 		return "", errors.New("invalid public key length")
 	}
@@ -49,8 +54,6 @@ func GenerateToken(edSecretKey []byte, request *Request) (string, error) {
 	timestampBinary := make([]byte, 8)
 	binary.BigEndian.PutUint64(timestampBinary, uint64(request.Timestamp))
 
-	id, _ := uuid.Parse(request.UUID)
-
 	rawToken := make([]byte, 0, 120)
 	rawToken = append(rawToken, id[:]...)
 	rawToken = append(rawToken, request.PublicKey...)
@@ -63,7 +66,7 @@ func GenerateToken(edSecretKey []byte, request *Request) (string, error) {
 }
 
 func DecodeToken(token string, request *Request) (uuid.UUID, []byte, []byte, int64, error) {
-	if len(token) == 160 {
+	if len(token) != 160 {
 		return uuid.Nil, nil, nil, 0, errors.New("invalid token length")
 	}
 	rawToken, err := base64.StdEncoding.DecodeString(token)
