@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
@@ -31,8 +32,16 @@ func GenerateToken(edSecretKey []byte, request *Request) (string, error) {
 		return "", errors.New("invalid uuid")
 	}
 
+	if len(edSecretKey) != ed25519.PrivateKeySize {
+		return "", errors.New("invalid secret key length")
+	}
+
 	if len(request.PublicKey) != ed25519.PublicKeySize {
 		return "", errors.New("invalid public key length")
+	}
+
+	if derivedPublicKey := ed25519.PrivateKey(edSecretKey).Public().(ed25519.PublicKey); !bytes.Equal(request.PublicKey, derivedPublicKey[:]) {
+		return "", errors.New("key pair mismatch")
 	}
 
 	message := crypto.ConcatBytes(
