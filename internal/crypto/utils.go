@@ -3,8 +3,6 @@ package crypto
 import (
 	"encoding/binary"
 	"runtime"
-
-	"golang.org/x/crypto/blake2b"
 )
 
 func Zero(b []byte) {
@@ -12,11 +10,6 @@ func Zero(b []byte) {
 		b[i] = 0
 	}
 	runtime.KeepAlive(b)
-}
-
-func HashPublicKey(edPK []byte) []byte {
-	hash := blake2b.Sum256(edPK)
-	return hash[:10]
 }
 
 func ConcatBytes(fields ...[]byte) []byte {

@@ -36,6 +36,9 @@ func Unpack(packed []byte) (*SecretKeys, error) {
 	var s SecretKeys
 
 	err := msgpack.Unmarshal(packed, &s)
+	if err != nil {
+		return nil, err
+	}
 
 	if len(s.Ed25519) != ed25519.PrivateKeySize {
 		return nil, errors.New("invalid Ed25519 secret key size: must be exactly 64 bytes")
