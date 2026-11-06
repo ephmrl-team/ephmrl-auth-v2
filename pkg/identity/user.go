@@ -34,7 +34,13 @@ func (s *SecretKeys) Pack() ([]byte, error) {
 
 func Unpack(packed []byte) (*SecretKeys, error) {
 	var s SecretKeys
+
 	err := msgpack.Unmarshal(packed, &s)
+
+	if len(s.Ed25519) != ed25519.PrivateKeySize {
+		return nil, errors.New("invalid Ed25519 secret key size: must be exactly 64 bytes")
+	}
+
 	return &s, err
 }
 
@@ -70,7 +76,7 @@ func Generate() (*Identity, *SecretKeys, error) {
 
 func NewSecretKeys(ed []byte) (secret *SecretKeys, err error) {
 	if len(ed) != ed25519.PrivateKeySize {
-		return nil, errors.New("invalid Ed25519 secret key size: must be exactly 32 bytes")
+		return nil, errors.New("invalid Ed25519 secret key size: must be exactly 64 bytes")
 	}
 
 	var edCopy []byte

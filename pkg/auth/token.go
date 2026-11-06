@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
@@ -21,6 +22,14 @@ type Request struct {
 }
 
 func GenerateToken(edSecretKey []byte, request *Request) (string, error) {
+	if request == nil {
+		return "", errors.New("request cannot be nil")
+	}
+
+	if len(request.PublicKey) != ed25519.PublicKeySize {
+		return "", errors.New("invalid public key length")
+	}
+
 	message := crypto.ConcatBytes(
 		[]byte(request.Method),
 		[]byte(request.Path),
