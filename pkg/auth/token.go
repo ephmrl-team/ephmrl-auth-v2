@@ -79,7 +79,12 @@ func DecodeToken(token string, request *Request) (uuid.UUID, []byte, []byte, int
 		[]byte(base64.StdEncoding.EncodeToString(pc)),
 	)
 
-	if !ed25519.Verify(pc, message, signature) {
+	isValid, err := crypto.VerifyEd25519(pc, message, signature)
+	if err != nil {
+		return uuid.UUID{}, nil, nil, 0, err
+	}
+
+	if !isValid {
 		return uuid.UUID{}, nil, nil, 0, errors.New("invalid signature")
 	}
 
