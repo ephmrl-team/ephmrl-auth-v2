@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"filippo.io/edwards25519"
+
 	"github.com/cloudflare/circl/sign/ed25519"
 )
 
@@ -86,4 +88,23 @@ func VerifyEd25519(pkBytes []byte, message []byte, signature []byte) (bool, erro
 	}
 
 	return ok, nil
+}
+
+func ValidatePublicKeyStrict(pubKey []byte) error {
+	if len(pubKey) != 32 {
+		return errors.New("invalid public key length")
+	}
+
+	point, err := new(edwards25519.Point).SetBytes(pubKey)
+	if err != nil {
+		return errors.New("invalid or non-canonical public key")
+	}
+
+	var p8 edwards25519.Point
+	p8.MultByCofactor(point)
+	if p8.Equal(edwards25519.NewIdentityPoint()) == 1 {
+		return errors.New("rejected: small-order public key")
+	}
+
+	return nil
 }
