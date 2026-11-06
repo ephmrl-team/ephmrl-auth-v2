@@ -77,7 +77,7 @@ func DecodeToken(token string, request *Request) (uuid.UUID, []byte, []byte, int
 		[]byte(request.Path),
 		[]byte(request.Type),
 		[]byte(request.BodyHash),
-		fmt.Appendf([]byte{}, "%d", request.Timestamp),
+		fmt.Appendf([]byte{}, "%d", timestamp),
 		[]byte(parsedUUID.String()),
 		[]byte(base64.StdEncoding.EncodeToString(pc)),
 	)
