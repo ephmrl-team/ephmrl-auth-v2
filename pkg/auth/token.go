@@ -31,6 +31,7 @@ func GenerateToken(edSecretKey []byte, request *Request) (string, error) {
 	}
 
 	message := crypto.ConcatBytes(
+		[]byte("ephmrl-auth:v2:ed25519"),
 		[]byte(request.Method),
 		[]byte(request.Path),
 		[]byte(request.Type),
@@ -81,6 +82,7 @@ func DecodeToken(token string, request *Request) (uuid.UUID, []byte, []byte, int
 	timestamp := int64(binary.BigEndian.Uint64(rawToken[112:120]))
 
 	message := crypto.ConcatBytes(
+		[]byte("ephmrl-auth:v2:ed25519"),
 		[]byte(request.Method),
 		[]byte(request.Path),
 		[]byte(request.Type),
