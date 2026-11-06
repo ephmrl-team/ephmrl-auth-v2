@@ -8,15 +8,24 @@ import (
 )
 
 func main() {
-	user, secret, err := identity.Generate()
+	identityKeys, secret, err := identity.Generate()
 	if err != nil {
 		panic(err)
 	}
 
-	request, err := auth.NewRequest("DELETE", "/user", "application/json", "", user.PublicKeys.Ed25519)
+	request, err := auth.NewRequest(
+		"DELETE",
+		"/user",
+		"application/json",
+		"",
+		identityKeys.PublicKeys.Ed25519,
+	)
 	if err != nil {
 		panic(err)
 	}
+
+	request.Query = ""
+	request.Host = "example.com"
 
 	token, err := auth.GenerateToken(secret.Ed25519, request)
 	if err != nil {
@@ -27,14 +36,22 @@ func main() {
 
 	fmt.Println()
 
-	uuid, publicKey, signature, timestamp, err := auth.DecodeToken(token, request)
+	verifyRequest := &auth.VerifyRequest{
+		Method:   request.Method,
+		Path:     request.Path,
+		Query:    request.Query,
+		Host:     request.Host,
+		Type:     request.Type,
+		BodyHash: request.BodyHash,
+	}
 
+	decodedUUID, publicKey, signature, decodedTimestamp, err := auth.DecodeToken(token, verifyRequest)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println("uuid", uuid)
+	fmt.Println("uuid", decodedUUID)
 	fmt.Println("public key", publicKey)
 	fmt.Println("signature", signature)
-	fmt.Println("timestamp", timestamp)
+	fmt.Println("timestamp", decodedTimestamp)
 }

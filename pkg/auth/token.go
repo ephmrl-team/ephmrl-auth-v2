@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
-	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/cloudflare/circl/sign/ed25519"
@@ -13,9 +13,13 @@ import (
 	"github.com/google/uuid"
 )
 
-type Request struct {
+const signedMessageDomain = "ephmrl-auth:v2:ed25519"
+
+type SignRequest struct {
 	Method    string
 	Path      string
+	Query     string
+	Host      string
 	Type      string
 	BodyHash  string
 	Timestamp int64
@@ -23,28 +27,58 @@ type Request struct {
 	PublicKey []byte
 }
 
-func NewRequest(method, path, requestType, bodyHash string, publicKey []byte) (*Request, error) {
-	uuid, err := uuid.NewRandom()
+type VerifyRequest struct {
+	Method   string
+	Path     string
+	Query    string
+	Host     string
+	Type     string
+	BodyHash string
+}
+
+func NewRequest(method, path, requestType, bodyHash string, publicKey []byte) (*SignRequest, error) {
+	requestID, err := uuid.NewRandom()
 	if err != nil {
 		return nil, err
 	}
 
-	timestamp := time.Now().Unix()
-
-	request := &Request{
+	return &SignRequest{
 		Method:    method,
 		Path:      path,
 		Type:      requestType,
 		BodyHash:  bodyHash,
-		Timestamp: timestamp,
-		UUID:      uuid.String(),
+		Timestamp: time.Now().Unix(),
+		UUID:      requestID.String(),
 		PublicKey: publicKey,
-	}
-
-	return request, nil
+	}, nil
 }
 
-func GenerateToken(edSecretKey []byte, request *Request) (string, error) {
+func signedMessage(
+	method string,
+	path string,
+	query string,
+	host string,
+	contentType string,
+	bodyHash string,
+	timestamp string,
+	id string,
+	publicKey []byte,
+) []byte {
+	return crypto.ConcatBytes(
+		[]byte(signedMessageDomain),
+		[]byte(method),
+		[]byte(path),
+		[]byte(query),
+		[]byte(host),
+		[]byte(contentType),
+		[]byte(bodyHash),
+		[]byte(timestamp),
+		[]byte(id),
+		[]byte(base64.StdEncoding.EncodeToString(publicKey)),
+	)
+}
+
+func GenerateToken(edSecretKey []byte, request *SignRequest) (string, error) {
 	if request == nil {
 		return "", errors.New("request cannot be nil")
 	}
@@ -62,19 +96,20 @@ func GenerateToken(edSecretKey []byte, request *Request) (string, error) {
 		return "", errors.New("invalid public key length")
 	}
 
-	if derivedPublicKey := ed25519.PrivateKey(edSecretKey).Public().(ed25519.PublicKey); !bytes.Equal(request.PublicKey, derivedPublicKey[:]) {
+	if derivedPublicKey := ed25519.PrivateKey(edSecretKey).Public().(ed25519.PublicKey); !bytes.Equal(request.PublicKey, derivedPublicKey) {
 		return "", errors.New("key pair mismatch")
 	}
 
-	message := crypto.ConcatBytes(
-		[]byte("ephmrl-auth:v2:ed25519"),
-		[]byte(request.Method),
-		[]byte(request.Path),
-		[]byte(request.Type),
-		[]byte(request.BodyHash),
-		fmt.Appendf([]byte{}, "%d", request.Timestamp),
-		[]byte(id.String()),
-		[]byte(base64.StdEncoding.EncodeToString(request.PublicKey)),
+	message := signedMessage(
+		request.Method,
+		request.Path,
+		request.Query,
+		request.Host,
+		request.Type,
+		request.BodyHash,
+		strconv.FormatInt(request.Timestamp, 10),
+		id.String(),
+		request.PublicKey,
 	)
 
 	signature, err := crypto.SignEd25519(edSecretKey, message)
@@ -91,12 +126,10 @@ func GenerateToken(edSecretKey []byte, request *Request) (string, error) {
 	rawToken = append(rawToken, signature...)
 	rawToken = append(rawToken, timestampBinary...)
 
-	token := base64.StdEncoding.EncodeToString(rawToken)
-
-	return token, nil
+	return base64.StdEncoding.EncodeToString(rawToken), nil
 }
 
-func DecodeToken(token string, request *Request) (uuid.UUID, []byte, []byte, int64, error) {
+func DecodeToken(token string, request *VerifyRequest) (uuid.UUID, []byte, []byte, int64, error) {
 	if request == nil {
 		return uuid.Nil, nil, nil, 0, errors.New("request cannot be nil")
 	}
@@ -128,15 +161,16 @@ func DecodeToken(token string, request *Request) (uuid.UUID, []byte, []byte, int
 	signature := rawToken[48:112]
 	timestamp := int64(binary.BigEndian.Uint64(rawToken[112:120]))
 
-	message := crypto.ConcatBytes(
-		[]byte("ephmrl-auth:v2:ed25519"),
-		[]byte(request.Method),
-		[]byte(request.Path),
-		[]byte(request.Type),
-		[]byte(request.BodyHash),
-		fmt.Appendf([]byte{}, "%d", timestamp),
-		[]byte(parsedUUID.String()),
-		[]byte(base64.StdEncoding.EncodeToString(pc)),
+	message := signedMessage(
+		request.Method,
+		request.Path,
+		request.Query,
+		request.Host,
+		request.Type,
+		request.BodyHash,
+		strconv.FormatInt(timestamp, 10),
+		parsedUUID.String(),
+		pc,
 	)
 
 	isValid, err := crypto.VerifyEd25519(pc, message, signature)
