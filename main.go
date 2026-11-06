@@ -33,7 +33,10 @@ func main() {
 		PublicKey: user.PublicKeys.Ed25519,
 	}
 
-	token := auth.GenerateToken(secret.Ed25519, request)
+	token, err := auth.GenerateToken(secret.Ed25519, request)
+	if err != nil {
+		panic(err)
+	}
 
 	fmt.Println(token)
 

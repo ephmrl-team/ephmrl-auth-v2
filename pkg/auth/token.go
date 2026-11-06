@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
@@ -21,7 +20,7 @@ type Request struct {
 	PublicKey []byte
 }
 
-func GenerateToken(edSecretKey []byte, request *Request) string {
+func GenerateToken(edSecretKey []byte, request *Request) (string, error) {
 	message := crypto.ConcatBytes(
 		[]byte(request.Method),
 		[]byte(request.Path),
@@ -32,7 +31,10 @@ func GenerateToken(edSecretKey []byte, request *Request) string {
 		[]byte(base64.StdEncoding.EncodeToString(request.PublicKey)),
 	)
 
-	signature := ed25519.Sign(edSecretKey, message)
+	signature, err := crypto.SignEd25519(edSecretKey, message)
+	if err != nil {
+		return "", err
+	}
 
 	timestampBinary := make([]byte, 8)
 	binary.BigEndian.PutUint64(timestampBinary, uint64(request.Timestamp))
@@ -47,7 +49,7 @@ func GenerateToken(edSecretKey []byte, request *Request) string {
 
 	token := base64.StdEncoding.EncodeToString(rawToken)
 
-	return token
+	return token, nil
 }
 
 func DecodeToken(token string, request *Request) (uuid.UUID, []byte, []byte, int64, error) {

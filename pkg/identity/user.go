@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/cloudflare/circl/sign/ed25519"
-	"github.com/mr-tron/base58"
 	"github.com/ephmrl-team/ephmrl-auth-v2/internal/crypto"
 	"github.com/vmihailenco/msgpack/v5"
 )
@@ -17,8 +16,7 @@ type SecretKeys struct {
 	Ed25519 []byte
 }
 
-type User struct {
-	ID         string     `json:"id"`
+type Identity struct {
 	PublicKeys PublicKeys `json:"public_keys"`
 }
 
@@ -40,13 +38,7 @@ func Unpack(packed []byte) (*SecretKeys, error) {
 	return &s, err
 }
 
-func GenerateUserID(edPK []byte) string {
-	truncatedHash := crypto.HashPublicKey(edPK)
-
-	return base58.Encode(truncatedHash)
-}
-
-func Generate() (*User, *SecretKeys, error) {
+func Generate() (*Identity, *SecretKeys, error) {
 	var err error
 
 	var ed25519Secret []byte
@@ -63,8 +55,7 @@ func Generate() (*User, *SecretKeys, error) {
 		return nil, nil, err
 	}
 
-	user := &User{
-		ID: GenerateUserID(ed25519Public),
+	identity := &Identity{
 		PublicKeys: PublicKeys{
 			Ed25519: ed25519Public,
 		},
@@ -74,7 +65,7 @@ func Generate() (*User, *SecretKeys, error) {
 		Ed25519: ed25519Secret,
 	}
 
-	return user, secret, nil
+	return identity, secret, nil
 }
 
 func NewSecretKeys(ed []byte) (secret *SecretKeys, err error) {
