@@ -1,12 +1,12 @@
 package auth
 
 import (
-	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
 	"fmt"
 
+	"github.com/cloudflare/circl/sign/ed25519"
 	"github.com/ephmrl-team/ephmrl-auth-v2/internal/crypto"
 	"github.com/google/uuid"
 )
